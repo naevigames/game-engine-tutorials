@@ -1,4 +1,4 @@
-project(chapter_1_tutorial_0)
+project(chapter_1_tutorial_1)
 
 add_executable(${PROJECT_NAME})
 

@@ -9,7 +9,7 @@ int32_t main()
 
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
-    auto window_handle = glfwCreateWindow(800, 600, "", nullptr, nullptr);
+    auto window_handle = glfwCreateWindow(800, 600, "chapter_1_tutorial_1", nullptr, nullptr);
     if  (window_handle == nullptr)
     {
         glfwTerminate();
