@@ -1,1 +1,2 @@
 add_subdirectory(Tutorial_1_OpenGL)
+add_subdirectory(Tutorial_1_OpenGL_Next)

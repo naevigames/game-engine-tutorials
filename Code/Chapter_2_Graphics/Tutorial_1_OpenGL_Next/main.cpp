@@ -3,8 +3,7 @@
 
 #include "glfw/platform_factory.hpp"
 
-#include <glfw/glfw3.h>
-#include <glad/glad.h>
+#include "gl/commands.hpp"
 
 int32_t main()
 {
@@ -18,19 +17,13 @@ int32_t main()
         return -1;
     }
 
-    window_manager.init(&platform_factory, { "chapter_2_tutorial_1", { 800, 600 } });
+    window_manager.init(&platform_factory, { "chapter_2_tutorial_1_next", { 800, 600 } });
 
-    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
-    {
-        platform_manager.release();
-        return -1;
-    }
-
-    glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
+    gl::Commands::clear_color(0.5f, 0.5f, 0.5f);
 
     while (window_manager.is_active())
     {
-        glClear(GL_COLOR_BUFFER_BIT);
+        gl::Commands::clear();
 
         window_manager.update();
         platform_manager.update();
