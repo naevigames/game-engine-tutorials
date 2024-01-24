@@ -5,6 +5,9 @@
 #include "glfw/platform_factory.hpp"
 #endif
 
+#include <glfw/glfw3.h>
+#include <glad/glad.h>
+
 int32_t main()
 {
     #ifdef GLFW_PLATFORM
@@ -21,8 +24,18 @@ int32_t main()
 
     window_manager.init(&platform_factory, { "chapter_2_tutorial_1", { 800, 600 } });
 
+    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
+    {
+        platform_manager.release();
+        return -1;
+    }
+
+    glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
+
     while (window_manager.is_active())
     {
+        glClear(GL_COLOR_BUFFER_BIT);
+
         window_manager.update();
         platform_manager.update();
     }
