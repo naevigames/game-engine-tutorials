@@ -1,1 +1,2 @@
 add_subdirectory(Chapter_1_Platform)
+add_subdirectory(Chapter_2_Graphics)
