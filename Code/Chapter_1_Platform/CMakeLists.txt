@@ -1,0 +1,2 @@
+add_subdirectory(Tutorial_1_Window)
+add_subdirectory(Tutorial_1_Window_Next)
