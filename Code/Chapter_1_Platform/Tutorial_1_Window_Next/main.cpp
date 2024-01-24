@@ -1,35 +1,34 @@
-#include <glfw/glfw3.h>
+#include "platform_manager.hpp"
+#include "window_manager.hpp"
 
-#include "glfw/platform.hpp"
+#ifdef GLFW_PLATFORM
+#include "glfw/platform_factory.hpp"
+#endif
 
 int32_t main()
 {
-    glfw::Platform platform;
+    #ifdef GLFW_PLATFORM
+    glfw::PlatformFactory platform_factory;
+    #endif
 
-    if (platform.init() == GLFW_FALSE)
+    auto& platform_manager = PlatformManager::instance();
+    auto& window_manager   = WindowManager::instance();
+
+    if (!platform_manager.init(&platform_factory))
     {
         return -1;
     }
 
-    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+    window_manager.init(&platform_factory, { "chapter_1_tutorial_1_next", { 800, 600 } });
 
-    auto window_handle = glfwCreateWindow(800, 600, "chapter_1_tutorial_1_next", nullptr, nullptr);
-    if  (window_handle == nullptr)
+    while (window_manager.is_active())
     {
-        glfwTerminate();
-        return -1;
+        window_manager.update();
+        platform_manager.update();
     }
 
-    glfwMakeContextCurrent(window_handle);
-
-    while (glfwWindowShouldClose(window_handle) == GLFW_FALSE)
-    {
-        glfwSwapBuffers(window_handle);
-        platform.poll_events();
-    }
-
-    glfwDestroyWindow(window_handle);
-    platform.release();
+    window_manager.release();
+    platform_manager.release();
 
     return 0;
 }
