@@ -1,4 +1,4 @@
-project(chapter_2_tutorial_1)
+project(chapter_2_tutorial_1_opengl)
 
 add_executable(${PROJECT_NAME})
 

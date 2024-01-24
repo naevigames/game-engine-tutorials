@@ -3,8 +3,6 @@
 
 #include "glfw/platform_factory.hpp"
 
-#include "gl/commands.hpp"
-
 int32_t main()
 {
     glfw::PlatformFactory platform_factory;
@@ -17,14 +15,10 @@ int32_t main()
         return -1;
     }
 
-    window_manager.init(&platform_factory, { "chapter_2_tutorial_1_opengl_next", { 800, 600 } });
-
-    gl::Commands::clear_color(0.5f, 0.5f, 0.5f);
+    window_manager.init(&platform_factory, { "chapter_2_tutorial_1_vulkan", { 800, 600 } });
 
     while (window_manager.is_active())
     {
-        gl::Commands::clear();
-
         window_manager.update();
         platform_manager.update();
     }

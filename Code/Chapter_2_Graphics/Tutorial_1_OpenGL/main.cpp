@@ -18,7 +18,7 @@ int32_t main()
         return -1;
     }
 
-    window_manager.init(&platform_factory, { "chapter_2_tutorial_1", { 800, 600 } });
+    window_manager.init(&platform_factory, { "chapter_2_tutorial_1_opengl", { 800, 600 } });
 
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
     {
