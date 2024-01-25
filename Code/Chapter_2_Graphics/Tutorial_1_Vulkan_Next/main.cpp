@@ -10,6 +10,8 @@
 #include <set>
 
 #include "vk/instance.hpp"
+#include "vk/surface.hpp"
+#include "vk/physical_device.hpp"
 
 int32_t main()
 {
@@ -27,62 +29,22 @@ int32_t main()
 
     window_manager.init(&platform_factory, { "chapter_2_tutorial_1_vulkan_next", { 800, 600 } });
 
-    vk::Instance   instance;
-    VkSurfaceKHR   vk_surface;
     VkDevice       vk_device;
     VkCommandPool  vk_command_pool;
     VkQueue        vk_graphics_queue;
     VkQueue        vk_present_queue;
     VkSwapchainKHR vk_swapchain;
 
+    vk::Instance instance;
     instance.create();
 
-    VkWin32SurfaceCreateInfoKHR vk_surface_create_info
-    {
-        .sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR,
-        .hinstance = GetModuleHandle(nullptr),
-        .hwnd      = std::any_cast<HWND>(window_manager.handle())
-    };
+    vk::Surface surface;
+    surface.create(instance, window_manager.handle());
 
-    vkCreateWin32SurfaceKHR(instance._handle, &vk_surface_create_info, nullptr, &vk_surface);
+    vk::PhysicalDevice physical_device;
 
-    uint32_t vk_physical_device_count = 0;
-    vkEnumeratePhysicalDevices(instance._handle, &vk_physical_device_count, nullptr);
-
-    std::vector<VkPhysicalDevice> vk_physical_devices(vk_physical_device_count);
-    vkEnumeratePhysicalDevices(instance._handle, &vk_physical_device_count, vk_physical_devices.data());
-
-    VkPhysicalDevice vk_physical_device = vk_physical_devices[0];
-
-    uint32_t vk_queue_family_count = 0;
-    vkGetPhysicalDeviceQueueFamilyProperties(vk_physical_device, &vk_queue_family_count, nullptr);
-
-    std::vector<VkQueueFamilyProperties> vk_queue_families(vk_queue_family_count);
-    vkGetPhysicalDeviceQueueFamilyProperties(vk_physical_device, &vk_queue_family_count, vk_queue_families.data());
-
-    uint32_t vk_graphics_queue_family_index = -1;
-    uint32_t vk_present_queue_family_index  = -1;
-
-    for (int32_t i = 0; i < vk_queue_family_count; i++)
-    {
-        VkBool32 vk_present_available = false;
-        vkGetPhysicalDeviceSurfaceSupportKHR(vk_physical_device, i, vk_surface, &vk_present_available);
-
-        if (vk_queue_families[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
-        {
-            vk_graphics_queue_family_index = i;
-        }
-
-        if (vk_present_available)
-        {
-            vk_present_queue_family_index = i;
-        }
-
-        if (vk_graphics_queue_family_index != -1 && vk_present_queue_family_index != -1)
-        {
-            break;
-        }
-    }
+    physical_device.find_device(instance);
+    physical_device.find_queue(surface);
 
     float vk_queue_priority = 1.0f;
     std::array<const char*, 1> vk_device_extensions
@@ -91,7 +53,7 @@ int32_t main()
     };
 
     std::vector<VkDeviceQueueCreateInfo>            vk_queue_create_infos;
-    std::set<uint32_t> vk_unique_queue_families = { vk_graphics_queue_family_index, vk_present_queue_family_index };
+    std::set<uint32_t> vk_unique_queue_families = { physical_device.graphics_queue_index, physical_device.present_queue_index };
 
     for (uint32_t queue_family : vk_unique_queue_families)
     {
@@ -116,28 +78,28 @@ int32_t main()
         .pEnabledFeatures        = &vk_device_features
     };
 
-    vkCreateDevice(vk_physical_device, &vk_device_create_info, nullptr, &vk_device);
+    vkCreateDevice(physical_device._handle, &vk_device_create_info, nullptr, &vk_device);
 
-    vkGetDeviceQueue(vk_device, vk_graphics_queue_family_index, 0, &vk_graphics_queue);
-    vkGetDeviceQueue(vk_device, vk_present_queue_family_index, 0, &vk_present_queue);
+    vkGetDeviceQueue(vk_device, physical_device.graphics_queue_index, 0, &vk_graphics_queue);
+    vkGetDeviceQueue(vk_device, physical_device.present_queue_index, 0, &vk_present_queue);
 
     VkSurfaceCapabilitiesKHR vk_surface_capabilities;
     std::vector<VkSurfaceFormatKHR> vk_surface_formats;
     std::vector<VkPresentModeKHR>   vk_present_modes;
 
-    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(vk_physical_device, vk_surface, &vk_surface_capabilities);
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physical_device._handle, surface._handle, &vk_surface_capabilities);
 
     uint32_t vk_surface_format_count;
-    vkGetPhysicalDeviceSurfaceFormatsKHR(vk_physical_device, vk_surface, &vk_surface_format_count, nullptr);
+    vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device._handle, surface._handle, &vk_surface_format_count, nullptr);
 
     vk_surface_formats.resize(vk_surface_format_count);
-    vkGetPhysicalDeviceSurfaceFormatsKHR(vk_physical_device, vk_surface, &vk_surface_format_count, vk_surface_formats.data());
+    vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device._handle, surface._handle, &vk_surface_format_count, vk_surface_formats.data());
 
     uint32_t vk_present_mode_count;
-    vkGetPhysicalDeviceSurfacePresentModesKHR(vk_physical_device, vk_surface, &vk_present_mode_count, nullptr);
+    vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device._handle, surface._handle, &vk_present_mode_count, nullptr);
 
     vk_present_modes.resize(vk_present_mode_count);
-    vkGetPhysicalDeviceSurfacePresentModesKHR(vk_physical_device, vk_surface, &vk_present_mode_count, vk_present_modes.data());
+    vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device._handle, surface._handle, &vk_present_mode_count, vk_present_modes.data());
 
     VkSurfaceFormatKHR vk_available_format = vk_surface_formats[0];
     VkPresentModeKHR   vk_available_mode   = VK_PRESENT_MODE_FIFO_KHR;
@@ -145,14 +107,14 @@ int32_t main()
     uint32_t vk_swapchain_images_count = vk_surface_capabilities.minImageCount + 1;
     uint32_t local_family_indices[2]   =
     {
-        vk_graphics_queue_family_index,
-        vk_present_queue_family_index
+        physical_device.graphics_queue_index,
+        physical_device.present_queue_index
     };
 
     VkSwapchainCreateInfoKHR vk_swapchain_create_info
     {
         .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
-        .surface = vk_surface,
+        .surface = surface._handle,
         .minImageCount = vk_swapchain_images_count,
         .imageFormat = vk_available_format.format,
         .imageColorSpace = vk_available_format.colorSpace,
@@ -208,7 +170,7 @@ int32_t main()
     VkCommandPoolCreateInfo vk_command_pool_create_info
     {
         .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-        .queueFamilyIndex = vk_graphics_queue_family_index,
+        .queueFamilyIndex = physical_device.graphics_queue_index,
     };
 
     vkCreateCommandPool(vk_device, &vk_command_pool_create_info, nullptr, &vk_command_pool);
@@ -287,7 +249,7 @@ int32_t main()
 
     vkDestroyDevice(vk_device, nullptr);
 
-    vkDestroySurfaceKHR(instance._handle, vk_surface, nullptr);
+    surface.destroy(instance);
     instance.destroy();
 
     window_manager.release();
