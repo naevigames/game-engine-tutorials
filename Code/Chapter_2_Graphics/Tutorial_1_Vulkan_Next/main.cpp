@@ -12,6 +12,7 @@
 #include "vk/instance.hpp"
 #include "vk/surface.hpp"
 #include "vk/physical_device.hpp"
+#include "vk/device.hpp"
 
 int32_t main()
 {
@@ -29,7 +30,6 @@ int32_t main()
 
     window_manager.init(&platform_factory, { "chapter_2_tutorial_1_vulkan_next", { 800, 600 } });
 
-    VkDevice       vk_device;
     VkCommandPool  vk_command_pool;
     VkQueue        vk_graphics_queue;
     VkQueue        vk_present_queue;
@@ -46,42 +46,11 @@ int32_t main()
     physical_device.find_device(instance);
     physical_device.find_queue(surface);
 
-    float vk_queue_priority = 1.0f;
-    std::array<const char*, 1> vk_device_extensions
-    {
-        VK_KHR_SWAPCHAIN_EXTENSION_NAME
-    };
+    vk::Device device;
+    device.create(physical_device);
 
-    std::vector<VkDeviceQueueCreateInfo>            vk_queue_create_infos;
-    std::set<uint32_t> vk_unique_queue_families = { physical_device.graphics_queue_index, physical_device.present_queue_index };
-
-    for (uint32_t queue_family : vk_unique_queue_families)
-    {
-        vk_queue_create_infos.push_back({
-            .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-            .queueFamilyIndex = queue_family,
-            .queueCount       = 1,
-            .pQueuePriorities = &vk_queue_priority
-        });
-    }
-
-    VkPhysicalDeviceFeatures vk_device_features
-    {
-    };
-    VkDeviceCreateInfo       vk_device_create_info
-    {
-        .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-        .queueCreateInfoCount    = static_cast<uint32_t>(vk_queue_create_infos.size()),
-        .pQueueCreateInfos       = vk_queue_create_infos.data(),
-        .enabledExtensionCount   = (int32_t)vk_device_extensions.size(),
-        .ppEnabledExtensionNames = vk_device_extensions.data(),
-        .pEnabledFeatures        = &vk_device_features
-    };
-
-    vkCreateDevice(physical_device._handle, &vk_device_create_info, nullptr, &vk_device);
-
-    vkGetDeviceQueue(vk_device, physical_device.graphics_queue_index, 0, &vk_graphics_queue);
-    vkGetDeviceQueue(vk_device, physical_device.present_queue_index, 0, &vk_present_queue);
+    vkGetDeviceQueue(device._handle, physical_device.graphics_queue_index, 0, &vk_graphics_queue);
+    vkGetDeviceQueue(device._handle, physical_device.present_queue_index, 0, &vk_present_queue);
 
     VkSurfaceCapabilitiesKHR vk_surface_capabilities;
     std::vector<VkSurfaceFormatKHR> vk_surface_formats;
@@ -128,6 +97,12 @@ int32_t main()
         .oldSwapchain = VK_NULL_HANDLE
     };
 
+    std::set<uint32_t> vk_unique_queue_families =
+    {
+        physical_device.graphics_queue_index,
+        physical_device.present_queue_index
+    };
+
     if (vk_unique_queue_families.size() == 1)
     {
         vk_swapchain_create_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -139,13 +114,13 @@ int32_t main()
         vk_swapchain_create_info.pQueueFamilyIndices   = local_family_indices;
     }
 
-    vkCreateSwapchainKHR(vk_device, &vk_swapchain_create_info, nullptr, &vk_swapchain);
+    vkCreateSwapchainKHR(device._handle, &vk_swapchain_create_info, nullptr, &vk_swapchain);
 
     uint32_t local_swapchain_images_count;
-    vkGetSwapchainImagesKHR(vk_device, vk_swapchain, &local_swapchain_images_count, nullptr);
+    vkGetSwapchainImagesKHR(device._handle, vk_swapchain, &local_swapchain_images_count, nullptr);
 
     std::vector<VkImage> vk_swapchain_images(local_swapchain_images_count);
-    vkGetSwapchainImagesKHR(vk_device, vk_swapchain, &local_swapchain_images_count, vk_swapchain_images.data());
+    vkGetSwapchainImagesKHR(device._handle, vk_swapchain, &local_swapchain_images_count, vk_swapchain_images.data());
 
     std::vector<VkImageView> vk_swapchain_images_view;
     vk_swapchain_images_view.resize(local_swapchain_images_count);
@@ -162,7 +137,7 @@ int32_t main()
             .subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }
         };
 
-        vkCreateImageView(vk_device, &create_info, nullptr, &vk_swapchain_images_view[i]);
+        vkCreateImageView(device._handle, &create_info, nullptr, &vk_swapchain_images_view[i]);
     }
 
     std::vector<VkCommandBuffer> vk_command_buffers(local_swapchain_images_count);
@@ -173,7 +148,7 @@ int32_t main()
         .queueFamilyIndex = physical_device.graphics_queue_index,
     };
 
-    vkCreateCommandPool(vk_device, &vk_command_pool_create_info, nullptr, &vk_command_pool);
+    vkCreateCommandPool(device._handle, &vk_command_pool_create_info, nullptr, &vk_command_pool);
 
     VkCommandBufferAllocateInfo vk_command_buffer_allocate_info
     {
@@ -183,7 +158,7 @@ int32_t main()
         .commandBufferCount = local_swapchain_images_count
     };
 
-    vkAllocateCommandBuffers(vk_device, &vk_command_buffer_allocate_info, vk_command_buffers.data());
+    vkAllocateCommandBuffers(device._handle, &vk_command_buffer_allocate_info, vk_command_buffers.data());
 
     VkCommandBufferBeginInfo vk_command_begin_info
     {
@@ -216,7 +191,7 @@ int32_t main()
     while (window_manager.is_active())
     {
         uint32_t local_image_index = 0;
-        vkAcquireNextImageKHR(vk_device, vk_swapchain, UINT64_MAX, nullptr, nullptr, &local_image_index);
+        vkAcquireNextImageKHR(device._handle, vk_swapchain, UINT64_MAX, nullptr, nullptr, &local_image_index);
 
         VkSubmitInfo vk_submit_info
         {
@@ -242,12 +217,12 @@ int32_t main()
 
     for (auto image_view : vk_swapchain_images_view)
     {
-        vkDestroyImageView(vk_device, image_view, nullptr);
+        vkDestroyImageView(device._handle, image_view, nullptr);
     }
 
-    vkDestroySwapchainKHR(vk_device, vk_swapchain, nullptr);
+    vkDestroySwapchainKHR(device._handle, vk_swapchain, nullptr);
 
-    vkDestroyDevice(vk_device, nullptr);
+    device.destroy();
 
     surface.destroy(instance);
     instance.destroy();
