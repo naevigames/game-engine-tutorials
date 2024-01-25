@@ -13,6 +13,7 @@
 #include "vk/surface.hpp"
 #include "vk/physical_device.hpp"
 #include "vk/device.hpp"
+#include "vk/queue.hpp"
 
 int32_t main()
 {
@@ -31,8 +32,6 @@ int32_t main()
     window_manager.init(&platform_factory, { "chapter_2_tutorial_1_vulkan_next", { 800, 600 } });
 
     VkCommandPool  vk_command_pool;
-    VkQueue        vk_graphics_queue;
-    VkQueue        vk_present_queue;
     VkSwapchainKHR vk_swapchain;
 
     vk::Instance instance;
@@ -49,8 +48,11 @@ int32_t main()
     vk::Device device;
     device.create(physical_device);
 
-    vkGetDeviceQueue(device._handle, physical_device.graphics_queue_index, 0, &vk_graphics_queue);
-    vkGetDeviceQueue(device._handle, physical_device.present_queue_index, 0, &vk_present_queue);
+    vk::Queue graphics_queue;
+    vk::Queue present_queue;
+
+    graphics_queue.find_queue(device, physical_device.graphics_queue_index);
+    present_queue.find_queue(device,  physical_device.present_queue_index);
 
     VkSurfaceCapabilitiesKHR vk_surface_capabilities;
     std::vector<VkSurfaceFormatKHR> vk_surface_formats;
@@ -200,7 +202,7 @@ int32_t main()
             .pCommandBuffers = &vk_command_buffers[local_image_index]
         };
 
-        vkQueueSubmit(vk_graphics_queue, 1, &vk_submit_info, nullptr);
+        vkQueueSubmit(graphics_queue._handle, 1, &vk_submit_info, nullptr);
 
         VkPresentInfoKHR vk_present_info
         {
@@ -210,7 +212,7 @@ int32_t main()
             .pImageIndices  = &local_image_index
         };
 
-        vkQueuePresentKHR(vk_graphics_queue, &vk_present_info);
+        vkQueuePresentKHR(graphics_queue._handle, &vk_present_info);
 
         platform_manager.update();
     }
