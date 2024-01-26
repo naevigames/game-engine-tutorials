@@ -3,11 +3,7 @@
 
 #include "glfw/platform_factory.hpp"
 
-#include <glfw/glfw3.h>
-
 #include <vulkan/vulkan.h>
-
-#include <set>
 
 #include "vk/instance.hpp"
 #include "vk/surface.hpp"
@@ -29,9 +25,7 @@ int32_t main()
         return -1;
     }
 
-    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-
-    window_manager.init(&platform_factory, { "chapter_2_tutorial_1_vulkan_next", { 800, 600 } });
+    window_manager.init(&platform_factory, { "chapter_2_tutorial_1_vulkan_next", { 800, 600 }, true });
 
     VkCommandPool  vk_command_pool;
 
@@ -142,27 +136,11 @@ int32_t main()
 
     while (window_manager.is_active())
     {
-        uint32_t local_image_index = 0;
-        vkAcquireNextImageKHR(device._handle, swapchain._handle, UINT64_MAX, nullptr, nullptr, &local_image_index);
+        uint32_t image_index = 0;
+        vkAcquireNextImageKHR(device._handle, swapchain._handle, UINT64_MAX, nullptr, nullptr, &image_index);
 
-        VkSubmitInfo vk_submit_info
-        {
-            .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-            .commandBufferCount = 1,
-            .pCommandBuffers = &vk_command_buffers[local_image_index]
-        };
-
-        vkQueueSubmit(graphics_queue._handle, 1, &vk_submit_info, nullptr);
-
-        VkPresentInfoKHR vk_present_info
-        {
-            .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
-            .swapchainCount = 1,
-            .pSwapchains    = &swapchain._handle,
-            .pImageIndices  = &local_image_index
-        };
-
-        vkQueuePresentKHR(graphics_queue._handle, &vk_present_info);
+        graphics_queue.submit(vk_command_buffers[image_index]);
+        graphics_queue.present(swapchain, image_index);
 
         platform_manager.update();
     }
@@ -172,8 +150,7 @@ int32_t main()
         image_view.destroy(device);
     }
 
-    vkDestroySwapchainKHR(device._handle, swapchain._handle, nullptr);
-
+    swapchain.destroy(device);
     device.destroy();
 
     surface.destroy(instance);
