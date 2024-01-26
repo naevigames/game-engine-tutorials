@@ -15,6 +15,7 @@
 #include "vk/device.hpp"
 #include "vk/queue.hpp"
 #include "vk/image_view.hpp"
+#include "vk/swapchain.hpp"
 
 int32_t main()
 {
@@ -33,7 +34,6 @@ int32_t main()
     window_manager.init(&platform_factory, { "chapter_2_tutorial_1_vulkan_next", { 800, 600 } });
 
     VkCommandPool  vk_command_pool;
-    VkSwapchainKHR vk_swapchain;
 
     vk::Instance instance;
     instance.create();
@@ -52,8 +52,8 @@ int32_t main()
     vk::Queue graphics_queue;
     vk::Queue present_queue;
 
-    graphics_queue.find_queue(device, physical_device.graphics_queue_index);
-    present_queue.find_queue(device,  physical_device.present_queue_index);
+    graphics_queue.find_queue(device, physical_device.queue_indices.graphics());
+    present_queue.find_queue(device,  physical_device.queue_indices.present());
 
     VkSurfaceCapabilitiesKHR vk_surface_capabilities;
     std::vector<VkSurfaceFormatKHR> vk_surface_formats;
@@ -74,56 +74,15 @@ int32_t main()
     vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device._handle, surface._handle, &vk_present_mode_count, vk_present_modes.data());
 
     VkSurfaceFormatKHR vk_available_format = vk_surface_formats[0];
-    VkPresentModeKHR   vk_available_mode   = VK_PRESENT_MODE_FIFO_KHR;
 
-    uint32_t vk_swapchain_images_count = vk_surface_capabilities.minImageCount + 1;
-    uint32_t local_family_indices[2]   =
-    {
-        physical_device.graphics_queue_index,
-        physical_device.present_queue_index
-    };
-
-    VkSwapchainCreateInfoKHR vk_swapchain_create_info
-    {
-        .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
-        .surface = surface._handle,
-        .minImageCount = vk_swapchain_images_count,
-        .imageFormat = vk_available_format.format,
-        .imageColorSpace = vk_available_format.colorSpace,
-        .imageExtent = vk_surface_capabilities.currentExtent,
-        .imageArrayLayers = 1,
-        .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-        .preTransform = vk_surface_capabilities.currentTransform,
-        .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
-        .presentMode = vk_available_mode,
-        .clipped = VK_TRUE,
-        .oldSwapchain = VK_NULL_HANDLE
-    };
-
-    std::set<uint32_t> vk_unique_queue_families =
-    {
-        physical_device.graphics_queue_index,
-        physical_device.present_queue_index
-    };
-
-    if (vk_unique_queue_families.size() == 1)
-    {
-        vk_swapchain_create_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    }
-    else
-    {
-        vk_swapchain_create_info.imageSharingMode      = VK_SHARING_MODE_CONCURRENT;
-        vk_swapchain_create_info.queueFamilyIndexCount = 2,
-        vk_swapchain_create_info.pQueueFamilyIndices   = local_family_indices;
-    }
-
-    vkCreateSwapchainKHR(device._handle, &vk_swapchain_create_info, nullptr, &vk_swapchain);
+    vk::Swapchain swapchain;
+    swapchain.create(device, surface, { vk_surface_capabilities, vk_available_format }, physical_device.queue_indices);
 
     uint32_t local_swapchain_images_count;
-    vkGetSwapchainImagesKHR(device._handle, vk_swapchain, &local_swapchain_images_count, nullptr);
+    vkGetSwapchainImagesKHR(device._handle, swapchain._handle, &local_swapchain_images_count, nullptr);
 
     std::vector<VkImage> vk_swapchain_images(local_swapchain_images_count);
-    vkGetSwapchainImagesKHR(device._handle, vk_swapchain, &local_swapchain_images_count, vk_swapchain_images.data());
+    vkGetSwapchainImagesKHR(device._handle, swapchain._handle, &local_swapchain_images_count, vk_swapchain_images.data());
 
     std::vector<vk::ImageView> swapchain_images_views;
     swapchain_images_views.resize(local_swapchain_images_count);
@@ -138,7 +97,7 @@ int32_t main()
     VkCommandPoolCreateInfo vk_command_pool_create_info
     {
         .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-        .queueFamilyIndex = physical_device.graphics_queue_index,
+        .queueFamilyIndex = physical_device.queue_indices.graphics(),
     };
 
     vkCreateCommandPool(device._handle, &vk_command_pool_create_info, nullptr, &vk_command_pool);
@@ -184,7 +143,7 @@ int32_t main()
     while (window_manager.is_active())
     {
         uint32_t local_image_index = 0;
-        vkAcquireNextImageKHR(device._handle, vk_swapchain, UINT64_MAX, nullptr, nullptr, &local_image_index);
+        vkAcquireNextImageKHR(device._handle, swapchain._handle, UINT64_MAX, nullptr, nullptr, &local_image_index);
 
         VkSubmitInfo vk_submit_info
         {
@@ -199,7 +158,7 @@ int32_t main()
         {
             .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
             .swapchainCount = 1,
-            .pSwapchains    = &vk_swapchain,
+            .pSwapchains    = &swapchain._handle,
             .pImageIndices  = &local_image_index
         };
 
@@ -213,7 +172,7 @@ int32_t main()
         image_view.destroy(device);
     }
 
-    vkDestroySwapchainKHR(device._handle, vk_swapchain, nullptr);
+    vkDestroySwapchainKHR(device._handle, swapchain._handle, nullptr);
 
     device.destroy();
 
