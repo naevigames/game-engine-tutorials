@@ -14,6 +14,7 @@
 #include "vk/physical_device.hpp"
 #include "vk/device.hpp"
 #include "vk/queue.hpp"
+#include "vk/image_view.hpp"
 
 int32_t main()
 {
@@ -124,22 +125,12 @@ int32_t main()
     std::vector<VkImage> vk_swapchain_images(local_swapchain_images_count);
     vkGetSwapchainImagesKHR(device._handle, vk_swapchain, &local_swapchain_images_count, vk_swapchain_images.data());
 
-    std::vector<VkImageView> vk_swapchain_images_view;
-    vk_swapchain_images_view.resize(local_swapchain_images_count);
+    std::vector<vk::ImageView> swapchain_images_views;
+    swapchain_images_views.resize(local_swapchain_images_count);
 
     for (int32_t i = 0; i < local_swapchain_images_count; i++)
     {
-        VkImageViewCreateInfo create_info
-        {
-            .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-            .image = vk_swapchain_images[i],
-            .viewType = VK_IMAGE_VIEW_TYPE_2D,
-            .format = vk_available_format.format,
-            .components = { VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY },
-            .subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }
-        };
-
-        vkCreateImageView(device._handle, &create_info, nullptr, &vk_swapchain_images_view[i]);
+        swapchain_images_views[i].create(device, vk_swapchain_images[i], vk_available_format.format);
     }
 
     std::vector<VkCommandBuffer> vk_command_buffers(local_swapchain_images_count);
@@ -217,9 +208,9 @@ int32_t main()
         platform_manager.update();
     }
 
-    for (auto image_view : vk_swapchain_images_view)
+    for (auto image_view : swapchain_images_views)
     {
-        vkDestroyImageView(device._handle, image_view, nullptr);
+        image_view.destroy(device);
     }
 
     vkDestroySwapchainKHR(device._handle, vk_swapchain, nullptr);
